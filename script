@@ -1,0 +1,166 @@
+local library = loadstring(game:HttpGet('https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wall%20v3'))()
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Cam = workspace.CurrentCamera
+
+-- Создание GUI
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+screenGui.Name = "CustomMenu"
+
+-- Таймер
+local timerLabel = Instance.new("TextLabel", screenGui)
+timerLabel.Size = UDim2.new(0, 200, 0, 40)
+timerLabel.Position = UDim2.new(0.5, -100, 0, 20)
+timerLabel.BackgroundTransparency = 1
+timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+timerLabel.TextSize = 20
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.Text = "10:00"
+
+-- Красивая кнопка меню
+local MainButton = Instance.new("TextButton", screenGui)
+MainButton.Size = UDim2.new(0, 50, 0, 50)
+MainButton.Position = UDim2.new(0, 20, 0.5, -25)
+MainButton.Text = "☰"
+MainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainButton.Font = Enum.Font.GothamBold
+MainButton.TextSize = 24
+MainButton.BorderSizePixel = 0
+
+local corner = Instance.new("UICorner", MainButton)
+corner.CornerRadius = UDim.new(1, 0)
+
+-- Меню
+local MenuFrame = Instance.new("Frame", screenGui)
+MenuFrame.Size = UDim2.new(0, 180, 0, 240)
+MenuFrame.Position = UDim2.new(0, 80, 0.5, -120)
+MenuFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MenuFrame.Visible = false
+Instance.new("UICorner", MenuFrame)
+
+local function CreateButton(text, y)
+	local button = Instance.new("TextButton", MenuFrame)
+	button.Size = UDim2.new(0, 160, 0, 30)
+	button.Position = UDim2.new(0, 10, 0, y)
+	button.Text = text
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.Font = Enum.Font.Gotham
+	button.TextSize = 16
+	button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	Instance.new("UICorner", button)
+	return button
+end
+
+local function Notify(msg)
+	local notify = Instance.new("TextLabel", screenGui)
+	notify.Size = UDim2.new(0, 250, 0, 35)
+	notify.Position = UDim2.new(0.5, -125, 1, -50)
+	notify.Text = msg
+	notify.TextColor3 = Color3.fromRGB(255, 255, 255)
+	notify.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+	notify.TextSize = 16
+	notify.Font = Enum.Font.GothamBold
+	Instance.new("UICorner", notify)
+	task.delay(2.5, function() notify:Destroy() end)
+end
+
+-- Кнопки
+local magicBullets = false
+local killAura = false
+local noclip = false
+
+local aimbotBtn = CreateButton("Magic Bullets: OFF", 10)
+local killAuraBtn = CreateButton("Kill Aura: OFF", 50)
+local noclipBtn = CreateButton("Noclip + 3rd View: OFF", 90)
+local tpBtn = CreateButton("TP To End", 130)
+
+-- Обработчики кнопок
+aimbotBtn.MouseButton1Click:Connect(function()
+	magicBullets = not magicBullets
+	aimbotBtn.Text = "Magic Bullets: " .. (magicBullets and "ON" or "OFF")
+	Notify("Magic Bullets " .. (magicBullets and "включены" or "выключены"))
+end)
+
+killAuraBtn.MouseButton1Click:Connect(function()
+	killAura = not killAura
+	killAuraBtn.Text = "Kill Aura: " .. (killAura and "ON" or "OFF")
+	Notify("Kill Aura " .. (killAura and "включена" or "выключена"))
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+	noclip = not noclip
+	noclipBtn.Text = "Noclip + 3rd View: " .. (noclip and "ON" or "OFF")
+	Notify("Noclip " .. (noclip and "включен" or "выключен"))
+	if noclip then
+		Cam.CameraSubject = nil
+		Cam.CameraType = Enum.CameraType.Scriptable
+	else
+		Cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
+		Cam.CameraType = Enum.CameraType.Custom
+	end
+end)
+
+tpBtn.MouseButton1Click:Connect(function()
+	local endZone = workspace:FindFirstChild("EndZone") or workspace:FindFirstChild("Finish")
+	if endZone and Player.Character then
+		Player.Character.HumanoidRootPart.CFrame = endZone.CFrame + Vector3.new(0, 3, 0)
+		Notify("Телепортировано к финишу")
+	end
+end)
+
+MainButton.MouseButton1Click:Connect(function()
+	MenuFrame.Visible = not MenuFrame.Visible
+end)
+
+-- Основной цикл
+RunService.RenderStepped:Connect(function()
+	if magicBullets then
+		local target, minDist = nil, math.huge
+		for _, obj in ipairs(workspace:GetChildren()) do
+			if obj:FindFirstChild("Humanoid") and obj ~= Player.Character then
+				local dist = (obj.HumanoidRootPart.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+				if dist < minDist then
+					minDist = dist
+					target = obj
+				end
+			end
+		end
+		if target then
+			game:GetService("ReplicatedStorage").RemoteEvents.ShootEvent:FireServer(target.HumanoidRootPart.Position, target.HumanoidRootPart)
+		end
+	end
+
+	if killAura then
+		for _, npc in ipairs(workspace:GetChildren()) do
+			if npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+				local dist = (npc.HumanoidRootPart.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+				if dist <= 50 then
+					npc.Humanoid.Health = 0
+				end
+			end
+		end
+	end
+
+	if noclip then
+		for _, part in ipairs(Player.Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+		Cam.CFrame = Player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 15)
+	end
+end)
+
+-- Таймер 10 минут
+task.spawn(function()
+	for i = 600, 0, -1 do
+		local min = math.floor(i / 60)
+		local sec = i % 60
+		timerLabel.Text = string.format("%02d:%02d", min, sec)
+		wait(1)
+	end
+	Notify("Таймер истёк, поверните рычаг")
+end)
